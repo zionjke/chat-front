@@ -1,21 +1,45 @@
-import React, {useEffect, useState} from 'react';
-import io from 'socket.io-client';
+import React, {useEffect, useRef, useState} from 'react';
 import './App.css';
+import {useDispatch, useSelector} from "react-redux";
+import {AppState} from "./store/store";
+import {createConnection, destroyConnection, sendMessage, setClientName} from "./store/chatReducer";
 
-const socket = io('https://samurai-chat-back.herokuapp.com/');
 
 function App() {
 
-    useEffect(() => {
+    const dispatch = useDispatch();
+    const messages:Array<any> = useSelector((state: AppState) => state.chat.messages);
 
+    useEffect(() => {
+        dispatch(createConnection());
+
+        return () => {
+            dispatch(destroyConnection())
+        }
     }, []);
 
-    const [messages, setMessages] = useState([
-        {id: "dawdadas", message: "Hello", user: {id: "21555fsdf", name: "Artem"}},
-        {id: "dawd4das", message: "Whats up?", user: {id: "215dza55fsdf", name: "Viktor"}}
-    ]);
+
+
+
 
     const [message, setMessage] = useState('hello');
+
+    const [name, setName] = useState<string>('');
+
+    const messagesBlockRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        messagesBlockRef.current?.scrollIntoView({behavior: 'smooth'})
+    }, [messages]);
+
+    const sendMessageHandler = (): void => {
+        dispatch(sendMessage(message));
+        setMessage('')
+    };
+
+
+
+
 
     return (
         <div className="App">
@@ -28,18 +52,28 @@ function App() {
                     overflowY: "scroll"
                 }}>
                     {
+                        messages &&
                         messages.map(m => (
-                            <div key={m.id}>
+                            <div  key={m.id}>
                                 <b>{m.user.name}:</b>
                                 {m.message}
                                 <hr/>
                             </div>
                         ))
                     }
+                    <div ref={messagesBlockRef}></div>
                 </div>
-                <textarea value={message} onChange={(e) => setMessage(e.currentTarget.value)}>
+                <div>
+                    <input type="text" placeholder="Введите имя" value={name}
+                           onChange={e => setName(e.currentTarget.value)}/>
+                    <button onClick={() => {setClientName(name)}}>Send name</button>
+                </div>
+                <div>
+                     <textarea value={message} onChange={(e) => setMessage(e.currentTarget.value)}>
                 </textarea>
-                <button onClick={() => socket.emit('client-message-sent',message,setMessage('')) }>Send Message</button>
+                    <button onClick={sendMessageHandler}>Send Message
+                    </button>
+                </div>
             </div>
         </div>
     );
